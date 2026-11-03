@@ -87,3 +87,11 @@ test("forecastChanged detects revised forecasts independently of current conditi
   assert.equal(forecastChanged(a, b), true);
   assert.deepEqual(diffReading(a, b), {});
 });
+
+test("forecastChanged ignores key order, which jsonb does not preserve", () => {
+  const [a] = parseResponse([cities[0]], location(14.2, 3, -21600));
+  const reordered = JSON.parse(JSON.stringify(a));
+  reordered.forecast.daily = reordered.forecast.daily.map((d: Record<string, unknown>) => Object.fromEntries(Object.entries(d).reverse()));
+  reordered.forecast = { daily: reordered.forecast.daily, hourly: reordered.forecast.hourly };
+  assert.equal(forecastChanged(a, reordered), false);
+});
