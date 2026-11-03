@@ -145,3 +145,8 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+@keyframes value-flash {
+  0% { opacity: 0.35; transform: translateY(4px); }
+  100% { opacity: 1; transform: none; }
+}

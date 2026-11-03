@@ -1,3 +1,5 @@
+import { App } from "@/components/App";
+
 export default function Home() {
-  return <main className="p-8">Skyline</main>;
+  return <App />;
 }

@@ -14,7 +14,6 @@ interface Bubble { id: number; x: number; y: number; text: string }
 interface Bolt { id: number; x: number; points: string; branch: string }
 interface Beam { id: number; x1: number; y1: number; x2: number; y2: number }
 
-let uid = 1;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const inBox = (x: number, y: number, b: Box, pad: number) =>
   x >= b.x - pad && x <= b.x + b.w + pad && y >= b.y - pad && y <= b.y + b.h + pad;
@@ -62,6 +61,7 @@ export function Stage({ cityId, scene, isDay, interactive = true }: StageProps) 
   const [shooting, setShooting] = useState<{ id: number; x: number; y: number } | null>(null);
   const [pokes, setPokes] = useState(0);
   const [tornadoX, setTornadoX] = useState(VB_W * 0.35);
+  const nextId = useRef(1);
   const lastClick = useRef(0);
   const busy = useRef(false);
   const timers = useRef<number[]>([]);
@@ -134,6 +134,28 @@ export function Stage({ cityId, scene, isDay, interactive = true }: StageProps) 
     return () => clearInterval(t);
   }, [scene, geo]);
 
+  const say = useCallback(
+    (x: number, y: number, text: string) => {
+      const id = nextId.current++;
+      setBubbles((b) => [...b.slice(-3), { id, x, y, text }]);
+      later(() => setBubbles((b) => b.filter((v) => v.id !== id)), 1700);
+    },
+    [later],
+  );
+
+  const strike = useCallback(
+    (x: number) => {
+      const id = nextId.current++;
+      const ground = groundScreenY();
+      const points = jagged(x, -10, ground, 70);
+      const mid = points.split(" ")[4].split(",").map(Number);
+      const branch = jagged(mid[0], mid[1], mid[1] + (ground - mid[1]) * 0.55, 90).replace(/^[^ ]+ /, `${mid[0]},${mid[1]} `);
+      setBolts((b) => [...b, { id, x, points, branch }]);
+      later(() => setBolts((b) => b.filter((v) => v.id !== id)), 900);
+    },
+    [groundScreenY, later],
+  );
+
   // Thunderstorms flash on their own too.
   useEffect(() => {
     if (scene !== "storm" || !geo) return;
@@ -146,30 +168,7 @@ export function Stage({ cityId, scene, isDay, interactive = true }: StageProps) 
     };
     schedule();
     return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scene, geo]);
-
-  const say = useCallback(
-    (x: number, y: number, text: string) => {
-      const id = uid++;
-      setBubbles((b) => [...b.slice(-3), { id, x, y, text }]);
-      later(() => setBubbles((b) => b.filter((v) => v.id !== id)), 1700);
-    },
-    [later],
-  );
-
-  const strike = useCallback(
-    (x: number) => {
-      const id = uid++;
-      const ground = groundScreenY();
-      const points = jagged(x, -10, ground, 70);
-      const mid = points.split(" ")[4].split(",").map(Number);
-      const branch = jagged(mid[0], mid[1], mid[1] + (ground - mid[1]) * 0.55, 90).replace(/^[^ ]+ /, `${mid[0]},${mid[1]} `);
-      setBolts((b) => [...b, { id, x, points, branch }]);
-      later(() => setBolts((b) => b.filter((v) => v.id !== id)), 900);
-    },
-    [groundScreenY, later],
-  );
+  }, [scene, geo, strike, toScreen]);
 
   const heroCenter = city.hero ? { x: city.hero.box.x + city.hero.box.w / 2, y: city.hero.box.y + city.hero.box.h / 2 } : null;
 
@@ -190,7 +189,7 @@ export function Stage({ cityId, scene, isDay, interactive = true }: StageProps) 
           if (busy.current) return;
           busy.current = true;
           setMoonMode("wink");
-          setShooting({ id: uid++, x: rect.width * (0.55 + Math.random() * 0.35), y: rect.height * (0.06 + Math.random() * 0.15) });
+          setShooting({ id: nextId.current++, x: rect.width * (0.55 + Math.random() * 0.35), y: rect.height * (0.06 + Math.random() * 0.15) });
           later(() => {
             setMoonMode("idle");
             setShooting(null);
@@ -204,7 +203,7 @@ export function Stage({ cityId, scene, isDay, interactive = true }: StageProps) 
         busy.current = true;
         const from = { x: sun.left - rect.left + sun.width / 2, y: sun.top - rect.top + sun.height / 2 };
         const to = heroCenter ? toScreen(heroCenter.x, heroCenter.y) : { x: px, y: py };
-        setBeam({ id: uid++, x1: from.x, y1: from.y, x2: to.x, y2: to.y });
+        setBeam({ id: nextId.current++, x1: from.x, y1: from.y, x2: to.x, y2: to.y });
         setSunMode("focus");
         if (hero) {
           setHeated(true);
@@ -225,7 +224,7 @@ export function Stage({ cityId, scene, isDay, interactive = true }: StageProps) 
       case "rain":
       case "drizzle": {
         if (hit && hero) {
-          setSprouts((s) => [...s.slice(-5), { id: uid++, dx: (Math.random() - 0.5) * 90, scale: 0.9 + Math.random() * 0.5 }]);
+          setSprouts((s) => [...s.slice(-5), { id: nextId.current++, dx: (Math.random() - 0.5) * 90, scale: 0.9 + Math.random() * 0.5 }]);
           const top = toScreen(hero.top.x, hero.top.y);
           particles.current?.burst("water", top.x, top.y - 10);
           if (!sprouts.length) say(top.x, top.y - 40, "something's sprouting!");
