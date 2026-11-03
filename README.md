@@ -127,7 +127,7 @@ curl -X POST https://<your-project-ref>.supabase.co/functions/v1/poll-weather \
 ### 2. Clerk ↔ Supabase
 
 1. In Clerk, open **Configure → Integrations → Supabase** (or "Connect with Supabase") and activate it. This adds the `role: authenticated` claim to session tokens.
-2. In Supabase, open **Authentication → Sign In / Providers → Third-Party Auth**, add **Clerk**, and paste your Clerk domain.
+2. In Supabase, open **Authentication → Sign In / Providers → Third-Party Auth**, add **Clerk**, and paste your Clerk domain **including `https://`** (for example `https://example.clerk.accounts.dev` for a development instance).
 
 ### 3. Environment variables
 
