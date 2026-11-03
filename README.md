@@ -2,6 +2,8 @@
 
 Pick the cities you care about and watch their live weather unfold in an animated skyline. A Supabase edge function polls [Open-Meteo](https://open-meteo.com) (no API key needed) every five minutes, records what changed, and Supabase Realtime pushes the new data to every open browser. No refresh needed.
 
+Live: https://live-weather-dashboard-three.vercel.app
+
 Launch cities with hand-drawn, interactive scenes: **Chicago, New York, San Francisco, London, Tokyo, Singapore**. Every other city gets a standard animated skyline with the same live weather.
 
 ## How it works
