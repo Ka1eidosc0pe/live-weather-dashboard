@@ -9,6 +9,14 @@ import { useEffect } from "react";
 let getClerkToken: () => Promise<string | null> = async () => null;
 let client: SupabaseClient | null = null;
 
+/**
+ * Realtime does not pick up the accessToken option on its own, so hand it the Clerk token explicitly.
+ * Clerk tokens live 60s; call this again to refresh the socket's auth before they expire.
+ */
+export async function authenticateRealtime(supabase: SupabaseClient): Promise<void> {
+  await supabase.realtime.setAuth(await getClerkToken());
+}
+
 export function useSupabase(): SupabaseClient {
   const { getToken } = useAuth();
   useEffect(() => {

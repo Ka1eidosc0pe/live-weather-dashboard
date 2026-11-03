@@ -3,7 +3,7 @@
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { computeFreshness, type Freshness } from "@/lib/freshness";
-import { useSupabase } from "@/lib/supabase";
+import { authenticateRealtime, useSupabase } from "@/lib/supabase";
 import type { City, WeatherChange, WeatherRow, WorkerRun } from "@/lib/types";
 
 export type Connection = "connecting" | "live" | "offline";
@@ -24,8 +24,7 @@ export interface LiveWeather {
   toggleCity: (id: string) => Promise<void>;
 }
 
-const upsertById = <T extends { id: number }>(list: T[], item: T, max = 30) =>
-  [item, ...list.filter((x) => x.id !== item.id)].slice(0, max);
+const upsertById = <T extends { id: number }>(list: T[], item: T, max = 30) => [item, ...list.filter((x) => x.id !== item.id)].slice(0, max);
 
 export function useLiveWeather(): LiveWeather {
   const supabase = useSupabase();
@@ -76,43 +75,58 @@ export function useLiveWeather(): LiveWeather {
       load().catch((e) => !cancelled && setLoadError(e instanceof Error ? e.message : String(e)));
     };
 
-    const channel = supabase
-      .channel("live-weather")
-      .on("postgres_changes", { event: "*", schema: "public", table: "weather_current" }, (p: RealtimePostgresChangesPayload<WeatherRow>) => {
-        if (p.eventType === "DELETE") return;
-        setWeather((prev) => ({ ...prev, [p.new.city_id]: p.new }));
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "worker_runs" }, (p: RealtimePostgresChangesPayload<WorkerRun>) => {
-        const run = p.new as WorkerRun;
-        setLastRun(run);
-        if (run.status === "success") setLastSuccess(run);
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "weather_changes" }, (p: RealtimePostgresChangesPayload<WeatherChange>) => {
-        setChanges((prev) => upsertById(prev, p.new as WeatherChange));
-      })
-      // Own selections only: RLS filters this stream, so other users' rows never arrive.
-      .on("postgres_changes", { event: "*", schema: "public", table: "user_cities" }, (p: RealtimePostgresChangesPayload<SelectionRow>) => {
-        if (p.eventType === "DELETE") {
-          const gone = (p.old as Partial<SelectionRow>).city_id;
-          if (gone) setSelection((prev) => prev.filter((s) => s.city_id !== gone));
-        } else {
-          const row = p.new as SelectionRow;
-          setSelection((prev) => [...prev.filter((s) => s.city_id !== row.city_id), row].sort((a, b) => a.position - b.position));
-        }
-      })
-      .subscribe((status) => {
-        if (cancelled) return;
-        if (status === "SUBSCRIBED") {
-          setConnection("live");
-          refetch(); // catch anything missed while connecting or reconnecting
-        } else if (status === "CLOSED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          setConnection("offline");
-        }
-      });
+    let channel: ReturnType<typeof supabase.channel> | undefined;
+    let refreshAuth: ReturnType<typeof setInterval> | undefined;
+
+    const start = async () => {
+      await authenticateRealtime(supabase);
+      if (cancelled) return;
+      channel = supabase
+        .channel("live-weather")
+        .on("postgres_changes", { event: "*", schema: "public", table: "weather_current" }, (p: RealtimePostgresChangesPayload<WeatherRow>) => {
+          if (p.eventType === "DELETE") return;
+          setWeather((prev) => ({ ...prev, [p.new.city_id]: p.new }));
+        })
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "worker_runs" }, (p: RealtimePostgresChangesPayload<WorkerRun>) => {
+          const run = p.new as WorkerRun;
+          setLastRun(run);
+          if (run.status === "success") setLastSuccess(run);
+        })
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "weather_changes" },
+          (p: RealtimePostgresChangesPayload<WeatherChange>) => {
+            setChanges((prev) => upsertById(prev, p.new as WeatherChange));
+          },
+        )
+        // Own selections only: RLS filters this stream, so other users' rows never arrive.
+        .on("postgres_changes", { event: "*", schema: "public", table: "user_cities" }, (p: RealtimePostgresChangesPayload<SelectionRow>) => {
+          if (p.eventType === "DELETE") {
+            const gone = (p.old as Partial<SelectionRow>).city_id;
+            if (gone) setSelection((prev) => prev.filter((s) => s.city_id !== gone));
+          } else {
+            const row = p.new as SelectionRow;
+            setSelection((prev) => [...prev.filter((s) => s.city_id !== row.city_id), row].sort((a, b) => a.position - b.position));
+          }
+        })
+        .subscribe((status) => {
+          if (cancelled) return;
+          if (status === "SUBSCRIBED") {
+            setConnection("live");
+            refetch(); // catch anything missed while connecting or reconnecting
+          } else if (status === "CLOSED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            setConnection("offline");
+          }
+        });
+      // Clerk session tokens are short-lived; keep the socket's token fresh.
+      refreshAuth = setInterval(() => void authenticateRealtime(supabase), 40_000);
+    };
+    start().catch((e) => !cancelled && setLoadError(e instanceof Error ? e.message : String(e)));
 
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
+      clearInterval(refreshAuth);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [supabase, load]);
 
