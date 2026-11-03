@@ -1,0 +1,147 @@
+/* Animation primitives for the animated scenes. All SVG-animated classes use fill-box origins. */
+.scene svg *[class*="anim-"],
+.scene .anim {
+  transform-box: fill-box;
+}
+
+@keyframes drift {
+  from { transform: translateX(-30vw); }
+  to { transform: translateX(130vw); }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes giggle {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  15% { transform: translate(-3px, 2px) rotate(-5deg); }
+  30% { transform: translate(3px, -2px) rotate(5deg); }
+  45% { transform: translate(-3px, 2px) rotate(-4deg); }
+  60% { transform: translate(3px, -2px) rotate(4deg); }
+  80% { transform: translate(-1px, 1px) rotate(-2deg); }
+}
+@keyframes shiver {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  10% { transform: translateX(-3px) rotate(-1.2deg); }
+  20% { transform: translateX(3px) rotate(1.2deg); }
+  30% { transform: translateX(-3px) rotate(-1.2deg); }
+  40% { transform: translateX(3px) rotate(1.2deg); }
+  50% { transform: translateX(-2px) rotate(-0.8deg); }
+  60% { transform: translateX(2px) rotate(0.8deg); }
+  75% { transform: translateX(-1px); }
+}
+@keyframes zap {
+  0%, 100% { filter: none; }
+  10%, 30%, 50% { filter: brightness(3) saturate(0.2); }
+  20%, 40% { filter: brightness(1); }
+}
+@keyframes pop {
+  0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
+  15% { transform: translate(-50%, -8px) scale(1.05); opacity: 1; }
+  80% { transform: translate(-50%, -20px) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -28px) scale(0.95); opacity: 0; }
+}
+@keyframes walk {
+  from { transform: translateX(-80px); }
+  to { transform: translateX(1680px); }
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+@keyframes leg {
+  from { transform: rotate(-22deg); }
+  to { transform: rotate(22deg); }
+}
+@keyframes sway {
+  0%, 100% { transform: translateX(-9px); }
+  50% { transform: translateX(9px); }
+}
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(var(--r, 40px)) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(var(--r, 40px)) rotate(-360deg); }
+}
+@keyframes flash {
+  0% { opacity: 0; }
+  8% { opacity: 0.85; }
+  18% { opacity: 0.1; }
+  28% { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+@keyframes bolt {
+  0% { opacity: 0; }
+  6% { opacity: 1; }
+  30% { opacity: 0.2; }
+  40% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes grow {
+  from { stroke-dashoffset: var(--len, 60); }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes leaf-in {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+@keyframes ripple {
+  from { transform: scale(0.2); opacity: 0.9; }
+  to { transform: scale(1.6); opacity: 0; }
+}
+@keyframes steam {
+  0% { transform: translateY(0); opacity: 0; }
+  40% { opacity: 0.8; }
+  100% { transform: translateY(-9px); opacity: 0; }
+}
+@keyframes squish {
+  0%, 100% { transform: scale(1, 1); }
+  30% { transform: scale(1.15, 0.8); }
+  60% { transform: scale(0.94, 1.1); }
+}
+@keyframes heat-rise {
+  0% { transform: translateY(0); opacity: 0; }
+  30% { opacity: 0.7; }
+  100% { transform: translateY(-46px); opacity: 0; }
+}
+@keyframes wave {
+  from { transform: translateX(0); }
+  to { transform: translateX(-80px); }
+}
+@keyframes wink {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.1); }
+}
+@keyframes shoot {
+  from { transform: translate(0, 0); opacity: 1; }
+  to { transform: translate(-340px, 190px); opacity: 0; }
+}
+@keyframes fog-drift {
+  from { transform: translateX(-6%); }
+  to { transform: translateX(6%); }
+}
+
+.anim-spin-slow { animation: spin 40s linear infinite; }
+.anim-giggle { animation: giggle 0.9s ease-in-out 2; }
+.anim-shiver { animation: shiver 0.9s ease-in-out; }
+.anim-zap { animation: zap 0.8s linear; }
+.anim-squish { animation: squish 0.6s ease-out; }
+.anim-wave { animation: wave 6s linear infinite; }
+
+.hero { transform-box: fill-box; transform-origin: 50% 100%; transition: filter 0.4s ease; }
+.hero--heated { filter: url(#heated); }
+.hero--lean { animation: sway 0.5s ease-in-out infinite; transform-origin: 50% 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim, [class*="anim-"] { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  .walker, .walker * { animation: none !important; }
+}
+
+@keyframes walk-rev {
+  from { transform: translateX(1680px); }
+  to { transform: translateX(-80px); }
+}
+
+@keyframes flash-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
